@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block  article %}
+    {% for art in articles %}
+        <p> {{ art.title }} </p>
+        {{ art.text }}<br>
+        {{ art.date }}
+    {% endfor %}
+{% endblock %}
