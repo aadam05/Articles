@@ -9,10 +9,8 @@ class FormArticle(ModelForm):
 
     class Meta:
         model = Article # название модели на основе которой создается форма
-        fields = [
-            'title',
-            'text',
-            'categ',
+        exclude = [
+            'date',
         ]
 
         widgets = {

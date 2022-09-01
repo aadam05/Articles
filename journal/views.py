@@ -13,62 +13,71 @@ from django.contrib.auth.forms import AuthenticationForm
 
 # Фреймворк для вывода сообщений
 from django.contrib import messages
+# messages for CBV
+from django.contrib.messages.views import SuccessMessageMixin
+
 
 # Для классовых представлений
-from django.views.generic import View, TemplateView, ListView
+from django.views.generic import View, TemplateView, ListView, FormView
 
-# Вывод категорий
-class ShowCat(ListView):
-    model = Category
+# Это используем в классах(потому что атрибуты класса оцениваются при импорте) 
+# Если использовать reverse, то будет ошибка "Reverse Not Found", поэтому используем reverse в функциях
+from django.urls import reverse_lazy
+
+
+
+# Вывод категорий через ListView
+class ArticleCreating(ListView):
+    queryset = Category.objects.all()
     context_object_name = 'categories'
     template_name = 'base.html'
 
 
-# Создание статьи
-class ArticleCreating(View):
-    def get(self, request):
-        form = FormArticle() # создаем пустую форму чтобы после сохранения старой вывелась пустая форма
-        return render(request, 'categories/index.html', {'form':form})
-    
-    def post(self, request):    
-        form = FormArticle(request.POST) # закидываем форму с введенными данными в переменную
+# Вывод формы и унаследование категорий
+class CreateFormView(ArticleCreating, FormView):
+    template_name = 'categories/index.html'
+    form_class = FormArticle
+    success_url = reverse_lazy('index')
 
-        if form.is_valid(): 
-            form.save() # сохранаяем форму в бд если она валидна
-        return render(request, 'categories/index.html', {'form':FormArticle}) # передаем запрос, какой шаблон, и форму
-    
-
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+        
 ############################################################################################################################################
 
 # Регистрация
-class Registration(View):
-    def get(self, request):
-        form = UserCreationForm()
-        return render(request, 'categories/reg.html', {'form':form})
+class RegistrationFormView(SuccessMessageMixin, FormView):
+    form_class = UserCreationForm
+    template_name = 'categories/reg.html'
+    success_url = reverse_lazy('sign_in')
+    success_message = 'Пользователь успешно зарегистрирован'
 
-    def post(self, request):
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Вы успешно зарегистрированы')
-            return redirect('sign_in')
-        else:
-            messages.error(request, 'Неправильная форма, повторите попытку')
-            return render(request, 'categories/reg.html', {'form':UserCreationForm})
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.save()
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.add_message(self.request, messages.ERROR, 'Данные введены неверно, повторите попытку')
+        return redirect('sign_up')
+
 
 # Авторизация
-class Auth(View):
-    def get(self, request):
-        form = AuthenticationForm()
-        return render(request, 'categories/login.html', {'form':form})
+class AuthFormView(SuccessMessageMixin, FormView):
+    form_class = AuthenticationForm
+    template_name = 'categories/login.html'
+    success_url = reverse_lazy('index')
+    success_message = 'Привет %(username)s'
 
-    def post(self, request):
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            messages.success(request, 'Добро пожаловть ' + username)
-        else:
-            messages.error(request, 'Логин или пароль неверны, повторите попытку')
-            return render(request, 'categories/login.html', {'form':AuthenticationForm})
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        login(self.request, form.get_user())
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.add_message(self.request, messages.ERROR, 'Данные введены неверно, повторите попытку')
+        return redirect('sign_in')
