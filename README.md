@@ -1,6 +1,6 @@
 # Django Article app
 
-For start:
+For start, do this:
 1. Make migrations:
 ```shell
 python manage.py makemigrations
